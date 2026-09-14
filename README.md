@@ -133,3 +133,60 @@ The obvious approach — read the fields, fill the record — will book perhaps 
 Past that stall there is a shift in how you picture *what one of these documents actually is* — after which the failures stop being a dozen unrelated bugs and become one thing wearing a dozen masks.
 
 We are not going to tell you what that shift is. Arriving at it, unaided, is the exam.
+
+---
+
+# Running the submission
+
+## Install
+
+```bash
+sudo apt-get install -y poppler-utils tesseract-ocr \
+  tesseract-ocr-deu tesseract-ocr-est tesseract-ocr-por \
+  tesseract-ocr-fra tesseract-ocr-spa tesseract-ocr-msa
+pip install -r requirements.txt
+```
+
+Poppler and Tesseract are only needed for scanned pages; PDFs with a text layer
+are read without them.
+
+## The one command
+
+```bash
+python -m autodraft --input documents --output output
+```
+
+It writes `output/<name>.json` for every `documents/<name>.pdf`, a run report to
+`reports/run_report.json`, and prints a summary: how many payables were found,
+how many the ERP books to the total their own page states, what was declined,
+and which reinterpretation each corrected document needed.
+
+Useful flags: `--report PATH`, `--master-data DIR`, `--only SUBSTRING`,
+`--workers N`, `--cache DIR` (`''` disables the OCR cache), `--tenant NAME`
+(buyer hint for documents that do not print a bill-to), `-v`.
+
+## Optional: a vision model instead of OCR
+
+Extraction defaults to the local text/OCR reader and needs no API key. Setting
+these swaps in a vision model for transcription only — segmentation, master-data
+matching and reconciliation are unchanged, and any unavailable or malformed
+model response falls back to the local reading:
+
+```bash
+export AUTODRAFT_LLM=openai        # or: anthropic
+export OPENAI_API_KEY=...          # or: ANTHROPIC_API_KEY
+export AUTODRAFT_LLM_MODEL=...     # optional override
+```
+
+## Tests
+
+```bash
+python tools/make_synthetic_docs.py --output sample_documents   # optional
+python -m pytest tests -q
+```
+
+The tests build their own synthetic corpus (locale-formatted, tax-inclusive,
+multi-rate, credit-note, statement, prepayment and two-invoices-in-one-file
+documents), so they run without the graded PDFs.
+
+The design write-up is in [DESIGN.md](DESIGN.md).
